@@ -1,0 +1,1558 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendease — Student</title>
+    <meta name="description" content="Student QR attendance scanner for the Attendease System.">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- QR Code Scanner -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <style>
+        /* ===== RESET & VARIABLES ===== */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --primary: #1a73e8;
+            --primary-dark: #1557b0;
+            --primary-light: #e8f0fe;
+            --primary-glow: rgba(26, 115, 232, 0.15);
+            --accent-green: #1db954;
+            --accent-green-bg: rgba(29, 185, 84, 0.12);
+            --accent-red: #e74c3c;
+            --accent-red-bg: rgba(231, 76, 60, 0.12);
+            --accent-amber: #f59e0b;
+            --accent-amber-bg: rgba(245, 158, 11, 0.12);
+            --accent-purple: #8b5cf6;
+            --bg: #f0f2f5;
+            --surface: #ffffff;
+            --surface-hover: #f8f9fa;
+            --text: #1f2937;
+            --text-secondary: #6b7280;
+            --text-muted: #9ca3af;
+            --border: #e5e7eb;
+            --sidebar-bg: #0f172a;
+            --sidebar-text: #94a3b8;
+            --sidebar-active: #1a73e8;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+            --shadow-lg: 0 10px 40px rgba(0, 0, 0, 0.12);
+            --radius: 14px;
+            --radius-sm: 8px;
+            --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ===== SIDEBAR ===== */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar-bg);
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 100;
+            transition: transform var(--transition);
+        }
+
+        .sidebar-brand {
+            padding: 1.75rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .sidebar-brand .brand-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--primary), #4f9cf7);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+
+        .sidebar-brand h1 {
+            color: #fff;
+            font-size: 1.15rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+        }
+
+        .sidebar-brand span {
+            color: var(--sidebar-text);
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .sidebar-nav {
+            flex: 1;
+            padding: 1rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            overflow-y: auto;
+        }
+
+        .nav-label {
+            color: var(--sidebar-text);
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            padding: 1rem 0.75rem 0.5rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.7rem 0.85rem;
+            border-radius: var(--radius-sm);
+            color: var(--sidebar-text);
+            text-decoration: none;
+            font-size: 0.88rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all var(--transition);
+            position: relative;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+            color: #e2e8f0;
+        }
+
+        .nav-item.active {
+            background: var(--sidebar-active);
+            color: #fff;
+            box-shadow: 0 4px 12px rgba(26, 115, 232, 0.35);
+        }
+
+        .nav-item i {
+            width: 20px;
+            text-align: center;
+            font-size: 0.95rem;
+        }
+
+        .sidebar-footer {
+            padding: 1rem 0.75rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .sidebar-footer .nav-item {
+            color: #ef4444;
+        }
+
+        .sidebar-footer .nav-item:hover {
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        /* ===== MAIN CONTENT ===== */
+        .main-content {
+            flex: 1;
+            margin-left: 260px;
+            min-height: 100vh;
+        }
+
+        /* ===== TOP HEADER ===== */
+        .top-header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .mobile-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.25rem;
+            color: var(--text);
+            cursor: pointer;
+        }
+
+        .page-title h2 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .page-title p {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(135deg, var(--primary), var(--accent-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: transform var(--transition);
+        }
+
+        .header-avatar:hover {
+            transform: scale(1.08);
+        }
+
+        /* ===== PAGE WRAPPER ===== */
+        .page {
+            display: none;
+            padding: 1.75rem 2rem 3rem;
+            animation: fadeInPage 0.35s ease;
+        }
+
+        .page.active {
+            display: block;
+        }
+
+        @keyframes fadeInPage {
+            from {
+                opacity: 0;
+                transform: translateY(12px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== CARD COMPONENT ===== */
+        .card {
+            background: var(--surface);
+            border-radius: var(--radius);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            transition: box-shadow var(--transition);
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-sm);
+        }
+
+        .card-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-header h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        /* ===== QR SCANNER PAGE ===== */
+        .scan-wrapper {
+            max-width: 520px;
+            margin: 0 auto;
+        }
+
+        .scan-type-toggle {
+            display: flex;
+            background: var(--bg);
+            border-radius: var(--radius);
+            padding: 4px;
+            margin-bottom: 1.5rem;
+        }
+
+        .scan-type-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .scan-type-btn.active {
+            background: var(--surface);
+            color: var(--primary);
+            box-shadow: var(--shadow-sm);
+        }
+
+        #qr-reader {
+            width: 100%;
+            border-radius: var(--radius);
+            overflow: hidden;
+            margin-bottom: 1.25rem;
+            border: 2px dashed var(--border);
+            min-height: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg);
+            transition: border-color var(--transition);
+        }
+
+        #qr-reader:hover {
+            border-color: var(--primary);
+        }
+
+        #qr-reader video {
+            border-radius: var(--radius);
+        }
+
+        .scan-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .start-scan-btn {
+            flex: 1;
+            padding: 1rem;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            transition: all var(--transition);
+        }
+
+        .start-scan-btn:hover {
+            background: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(26, 115, 232, 0.3);
+        }
+
+        .upload-qr-btn {
+            flex: 1;
+            padding: 1rem;
+            background: var(--surface);
+            color: var(--primary);
+            border: 2px solid var(--primary);
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            transition: all var(--transition);
+        }
+
+        .upload-qr-btn:hover {
+            background: var(--primary-light);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(26, 115, 232, 0.12);
+        }
+
+        #qrUploadInput {
+            display: none;
+        }
+
+        .stop-camera-btn {
+            display: none;
+            width: 100%;
+            padding: 0.9rem;
+            background: var(--accent-red);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            align-items: center;
+            justify-content: center;
+            gap: 0.65rem;
+            margin-bottom: 1.25rem;
+            transition: all var(--transition);
+        }
+
+        .stop-camera-btn.visible {
+            display: flex;
+        }
+
+        .stop-camera-btn:hover {
+            background: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(231,76,60,0.3);
+        }
+
+        .scan-divider {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1.5rem 0;
+            color: var(--text-muted);
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .scan-divider::before,
+        .scan-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .scan-result {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+            animation: fadeInPage 0.4s ease;
+        }
+
+        .scan-result.show {
+            display: block;
+        }
+
+        .scan-result .result-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            margin: 0 auto 1.25rem;
+            animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0.5);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .scan-result.success .result-icon {
+            background: var(--accent-green-bg);
+            color: var(--accent-green);
+        }
+
+        .scan-result.error .result-icon {
+            background: var(--accent-red-bg);
+            color: var(--accent-red);
+        }
+
+        .scan-result h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 0.4rem;
+        }
+
+        .scan-result p {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .scan-result .result-details {
+            margin-top: 1.25rem;
+            padding: 1rem 1.25rem;
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .scan-result .result-details .detail-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.82rem;
+        }
+
+        .scan-result .result-details .detail-row span:first-child {
+            color: var(--text-muted);
+        }
+
+        .scan-result .result-details .detail-row span:last-child {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .scan-btn {
+            margin-top: 1.5rem;
+            padding: 0.8rem 2.5rem;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background var(--transition);
+        }
+
+        .scan-btn:hover {
+            background: var(--primary-dark);
+        }
+
+        /* ===== PROFILE PAGE ===== */
+        .profile-layout {
+            display: grid;
+            grid-template-columns: 340px 1fr;
+            gap: 1.5rem;
+            max-width: 960px;
+        }
+
+        .profile-card-main {
+            text-align: center;
+            padding: 2rem 1.5rem;
+        }
+
+        .profile-avatar-lg {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--accent-purple));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 2.2rem;
+            font-weight: 800;
+            margin: 0 auto 1rem;
+            box-shadow: 0 8px 24px rgba(26, 115, 232, 0.25);
+        }
+
+        .profile-card-main h3 {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .profile-card-main .profile-role {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-bottom: 1.25rem;
+        }
+
+        .profile-meta {
+            text-align: left;
+            border-top: 1px solid var(--border);
+            padding-top: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.85rem;
+        }
+
+        .profile-meta-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.82rem;
+        }
+
+        .profile-meta-item i {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+        }
+
+        .profile-meta-item span {
+            color: var(--text-secondary);
+        }
+
+        .profile-meta-item strong {
+            display: block;
+            color: var(--text);
+            font-weight: 600;
+        }
+
+        .profile-details-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .detail-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+
+        .detail-item label {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.4rem;
+        }
+
+        .detail-item .detail-value {
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text);
+            padding: 0.65rem 0.85rem;
+            background: var(--bg);
+            border-radius: var(--radius-sm);
+            border: 1px solid transparent;
+            transition: border-color var(--transition);
+        }
+
+        /* Editable fields */
+        .detail-item input.detail-input {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.88rem;
+            font-weight: 500;
+            color: var(--text);
+            padding: 0.65rem 0.85rem;
+            background: var(--surface);
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            width: 100%;
+            outline: none;
+            transition: border-color var(--transition);
+        }
+
+        .detail-item input.detail-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        .profile-actions {
+            display: flex;
+            gap: 0.75rem;
+            margin-top: 0.5rem;
+        }
+
+        .btn-save {
+            padding: 0.7rem 1.75rem;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-save:hover {
+            background: var(--primary-dark);
+            transform: translateY(-1px);
+        }
+
+        .btn-cancel {
+            padding: 0.7rem 1.75rem;
+            background: var(--surface);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-family: 'Inter', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all var(--transition);
+        }
+
+        .btn-cancel:hover {
+            background: var(--surface-hover);
+            border-color: var(--text-muted);
+        }
+
+        /* Save toast */
+        .save-toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #1f2937;
+            color: #fff;
+            padding: 0.85rem 1.5rem;
+            border-radius: var(--radius-sm);
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            z-index: 200;
+            transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .save-toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .save-toast i {
+            color: var(--accent-green);
+        }
+
+        /* ===== MOBILE OVERLAY ===== */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 99;
+        }
+
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 1024px) {
+            .profile-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay.show {
+                display: block;
+            }
+
+            .main-content {
+                margin-left: 0;
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .top-header {
+                padding: 0.85rem 1.25rem;
+            }
+
+            .page {
+                padding: 1.25rem 1rem 2rem;
+            }
+
+            .scan-actions {
+                flex-direction: column;
+            }
+
+            .detail-group {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- SIDEBAR OVERLAY (mobile) -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- ===== SIDEBAR ===== -->
+    <aside class="sidebar" id="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon"><i class="fas fa-qrcode"></i></div>
+            <div>
+                <h1>Attendease</h1>
+                <span>Student Portal</span>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <div class="nav-label">Main</div>
+            <a class="nav-item active" data-page="scan" id="navScan">
+                <i class="fas fa-qrcode"></i> Scan QR Code
+            </a>
+
+            <div class="nav-label">Account</div>
+            <a class="nav-item" data-page="profile" id="navProfile">
+                <i class="fas fa-user-circle"></i> Profile
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <a class="nav-item" id="logoutBtn">
+                <i class="fas fa-sign-out-alt"></i> Logout
+            </a>
+        </div>
+    </aside>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <div class="main-content">
+
+        <!-- TOP HEADER -->
+        <header class="top-header">
+            <div class="header-left">
+                <button class="mobile-toggle" id="mobileToggle">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <div class="page-title">
+                    <h2 id="headerTitle">Scan QR Code</h2>
+                    <p id="headerSubtitle">Record your attendance by scanning or uploading a QR code</p>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="header-avatar" id="headerAvatar">ML</div>
+            </div>
+        </header>
+
+        <!-- ======================================================== -->
+        <!--                   PAGE: SCAN QR CODE                     -->
+        <!-- ======================================================== -->
+        <section class="page active" id="pageScan">
+            <div class="scan-wrapper">
+                <div class="card">
+                    <div class="card-body">
+                        <!-- Time In / Time Out Toggle -->
+                        <div class="scan-type-toggle">
+                            <button class="scan-type-btn active" id="btnTimeIn" onclick="setScanType('in')">
+                                <i class="fas fa-sign-in-alt"></i> Time In
+                            </button>
+                            <button class="scan-type-btn" id="btnTimeOut" onclick="setScanType('out')">
+                                <i class="fas fa-sign-out-alt"></i> Time Out
+                            </button>
+                        </div>
+
+                        <!-- QR Scanner Area -->
+                        <div id="qr-reader">
+                            <div style="text-align:center; color:var(--text-muted); padding:2rem;">
+                                <i class="fas fa-camera"
+                                    style="font-size:2.5rem; margin-bottom:1rem; display:block; opacity:0.4;"></i>
+                                <p style="font-size:0.88rem; margin-bottom:0.35rem;">Camera preview will appear here</p>
+                                <p style="font-size:0.75rem; opacity:0.7;">Scan or upload a QR code to record attendance
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Scan / Upload Buttons -->
+                        <div class="scan-actions">
+                            <button class="start-scan-btn" id="startScanBtn" onclick="startScanner()">
+                                <i class="fas fa-camera"></i> Scan with Camera
+                            </button>
+                            <button class="upload-qr-btn" id="uploadQrBtn"
+                                onclick="document.getElementById('qrUploadInput').click()">
+                                <i class="fas fa-upload"></i> Upload QR Image
+                            </button>
+                            <input type="file" id="qrUploadInput" accept="image/*" onchange="handleQrUpload(event)">
+                        </div>
+
+                        <!-- Stop Camera Button (visible only when camera is on) -->
+                        <button class="stop-camera-btn" id="stopCameraBtn" onclick="stopScanner()">
+                            <i class="fas fa-video-slash"></i> Stop Camera
+                        </button>
+
+                        <!-- Scan Result -->
+                        <div class="scan-result" id="scanResult">
+                            <div class="result-icon" id="scanResultIcon"><i class="fas fa-check"></i></div>
+                            <h3 id="scanResultTitle">Attendance Recorded!</h3>
+                            <p id="scanResultMsg">Time In recorded for Mathematics at 7:45 AM</p>
+
+                            <div class="result-details" id="scanResultDetails">
+                                <div class="detail-row">
+                                    <span>Type</span>
+                                    <span id="detailType">Time In</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Subject</span>
+                                    <span id="detailSubject">Mathematics</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Room</span>
+                                    <span id="detailRoom">Room 204</span>
+                                </div>
+                                <div class="detail-row">
+                                    <span>Timestamp</span>
+                                    <span id="detailTime">7:45 AM</span>
+                                </div>
+                            </div>
+
+                            <button class="scan-btn" onclick="resetScanner()">
+                                <i class="fas fa-redo"></i> Scan Again
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ======================================================== -->
+        <!--                   PAGE: PROFILE                           -->
+        <!-- ======================================================== -->
+        <section class="page" id="pageProfile">
+            <div class="profile-layout">
+                <!-- Profile Card -->
+                <div class="card">
+                    <div class="card-body profile-card-main">
+                        <div class="profile-avatar-lg" id="profileAvatar">ML</div>
+                        <h3 id="profileName">Micaila Lichel</h3>
+                        <p class="profile-role">Student</p>
+
+                        <div class="profile-meta">
+                            <div class="profile-meta-item">
+                                <i class="fas fa-id-card"></i>
+                                <div>
+                                    <span>Student ID</span>
+                                    <strong id="profileStudentId">2025-00142</strong>
+                                </div>
+                            </div>
+                            <div class="profile-meta-item">
+                                <i class="fas fa-envelope"></i>
+                                <div>
+                                    <span>Email</span>
+                                    <strong id="profileEmail">micaila.lichel@school.edu</strong>
+                                </div>
+                            </div>
+                            <div class="profile-meta-item">
+                                <i class="fas fa-phone"></i>
+                                <div>
+                                    <span>Parent Contact</span>
+                                    <strong id="profileParentPhone">+63 917 XXX XXXX</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Editable Profile Details -->
+                <div class="profile-details-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-graduation-cap"
+                                    style="margin-right:8px;color:var(--primary);"></i>Academic Information</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="detail-group">
+                                <div class="detail-item">
+                                    <label>Grade Level</label>
+                                    <div class="detail-value" id="profileGrade">Grade 11</div>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Section</label>
+                                    <div class="detail-value" id="profileSection">STEM - Curie</div>
+                                </div>
+                                <div class="detail-item">
+                                    <label>School Year</label>
+                                    <div class="detail-value">2025–2026</div>
+                                </div>
+                                <div class="detail-item">
+                                    <label>Semester</label>
+                                    <div class="detail-value">2nd Semester</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-user-edit" style="margin-right:8px;color:var(--primary);"></i>Personal
+                                Information</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="detail-group">
+                                <div class="detail-item">
+                                    <label>Full Name</label>
+                                    <input type="text" class="detail-input" id="editFullName" value="Micaila Lichel">
+                                </div>
+                                <div class="detail-item">
+                                    <label>Email Address</label>
+                                    <input type="email" class="detail-input" id="editEmail"
+                                        value="micaila.lichel@school.edu">
+                                </div>
+                                <div class="detail-item">
+                                    <label>Phone Number</label>
+                                    <input type="tel" class="detail-input" id="editPhone" value="+63 917 XXX XXXX">
+                                </div>
+                                <div class="detail-item">
+                                    <label>Parent / Guardian Contact</label>
+                                    <input type="tel" class="detail-input" id="editParentPhone"
+                                        value="+63 917 XXX XXXX">
+                                </div>
+                            </div>
+                            <div class="profile-actions">
+                                <button class="btn-save" id="saveProfileBtn" onclick="saveProfile()">
+                                    <i class="fas fa-save"></i> Save Changes
+                                </button>
+                                <button class="btn-cancel" onclick="cancelProfileEdit()">Cancel</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h3><i class="fas fa-lock" style="margin-right:8px;color:var(--primary);"></i>Change
+                                Password</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="detail-group">
+                                <div class="detail-item">
+                                    <label>Current Password</label>
+                                    <input type="password" class="detail-input" id="editCurrentPassword"
+                                        placeholder="Enter current password">
+                                </div>
+                                <div class="detail-item">
+                                    <label>New Password</label>
+                                    <input type="password" class="detail-input" id="editNewPassword"
+                                        placeholder="Enter new password">
+                                </div>
+                            </div>
+                            <div class="profile-actions" style="margin-top:1rem;">
+                                <button class="btn-save" onclick="changePassword()">
+                                    <i class="fas fa-key"></i> Update Password
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </div>
+    <!-- /main-content -->
+
+    <!-- Save Toast -->
+    <div class="save-toast" id="saveToast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">Profile updated successfully!</span>
+    </div>
+
+    <!-- ===== JAVASCRIPT ===== -->
+    <script>
+        // ==========================================
+        //  NAVIGATION
+        // ==========================================
+        const navItems = document.querySelectorAll('.nav-item[data-page]');
+        const pages = document.querySelectorAll('.page');
+        const headerTitle = document.getElementById('headerTitle');
+        const headerSubtitle = document.getElementById('headerSubtitle');
+
+        const pageMeta = {
+            scan: { title: 'Scan QR Code', subtitle: 'Record your attendance by scanning or uploading a QR code' },
+            profile: { title: 'Profile', subtitle: 'View and update your personal information' },
+        };
+
+        navItems.forEach(item => {
+            item.addEventListener('click', () => {
+                const pageId = item.dataset.page;
+
+                navItems.forEach(n => n.classList.remove('active'));
+                item.classList.add('active');
+
+                pages.forEach(p => p.classList.remove('active'));
+                const targetPage = document.getElementById('page' + pageId.charAt(0).toUpperCase() + pageId.slice(1));
+                if (targetPage) targetPage.classList.add('active');
+
+                headerTitle.textContent = pageMeta[pageId].title;
+                headerSubtitle.textContent = pageMeta[pageId].subtitle;
+
+                // close mobile sidebar
+                sidebar.classList.remove('open');
+                sidebarOverlay.classList.remove('show');
+            });
+        });
+
+        // Mobile sidebar
+        const sidebar = document.getElementById('sidebar');
+        const sidebarOverlay = document.getElementById('sidebarOverlay');
+        document.getElementById('mobileToggle').addEventListener('click', () => {
+            sidebar.classList.toggle('open');
+            sidebarOverlay.classList.toggle('show');
+        });
+        sidebarOverlay.addEventListener('click', () => {
+            sidebar.classList.remove('open');
+            sidebarOverlay.classList.remove('show');
+        });
+
+        // Header avatar → go to profile
+        document.getElementById('headerAvatar').addEventListener('click', () => {
+            document.querySelector('[data-page="profile"]').click();
+        });
+
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to logout?')) {
+                window.location.href = 'login.html';
+            }
+        });
+
+        // ==========================================
+        //  QR SCANNER
+        // ==========================================
+        let scanType = 'in';
+        let html5QrCode = null;
+
+        function setScanType(type) {
+            scanType = type;
+            document.getElementById('btnTimeIn').classList.toggle('active', type === 'in');
+            document.getElementById('btnTimeOut').classList.toggle('active', type === 'out');
+        }
+
+        function startScanner() {
+            const scanResult = document.getElementById('scanResult');
+            scanResult.classList.remove('show');
+            scanResult.className = 'scan-result';
+
+            document.getElementById('startScanBtn').disabled = true;
+            document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Starting camera...';
+
+            // Clear placeholder
+            document.getElementById('qr-reader').innerHTML = '';
+
+            html5QrCode = new Html5Qrcode("qr-reader");
+
+            html5QrCode.start(
+                { facingMode: "environment" },
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                (decodedText) => {
+                    html5QrCode.stop().then(() => {
+                        document.getElementById('stopCameraBtn').classList.remove('visible');
+                        showScanResult(true, decodedText);
+                    }).catch(err => console.error(err));
+                },
+                (errorMessage) => { /* keep scanning */ }
+            ).then(() => {
+                // Camera started successfully — show stop button, hide scan actions
+                document.querySelector('.scan-actions').style.display = 'none';
+                document.getElementById('stopCameraBtn').classList.add('visible');
+            }).catch(err => {
+                console.warn('Camera not available:', err);
+                const scanResult = document.getElementById('scanResult');
+                scanResult.className = 'scan-result error show';
+                document.getElementById('scanResultIcon').innerHTML = '<i class="fas fa-video-slash"></i>';
+                document.getElementById('scanResultTitle').textContent = 'Camera Unavailable';
+                document.getElementById('scanResultMsg').textContent = 'Could not access camera. Please use the "Upload QR Image" option instead.';
+                document.getElementById('scanResultDetails').innerHTML = '';
+                document.getElementById('qr-reader').style.display = 'none';
+                document.querySelector('.scan-actions').style.display = 'none';
+                document.getElementById('startScanBtn').disabled = false;
+                document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-camera"></i> Scan with Camera';
+            });
+        }
+
+        function stopScanner() {
+            if (html5QrCode) {
+                html5QrCode.stop().then(() => {
+                    html5QrCode = null;
+                    document.getElementById('stopCameraBtn').classList.remove('visible');
+                    document.querySelector('.scan-actions').style.display = 'flex';
+
+                    document.getElementById('startScanBtn').disabled = false;
+                    document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-camera"></i> Scan with Camera';
+
+                    document.getElementById('qr-reader').innerHTML = `
+                        <div style="text-align:center; color:var(--text-muted); padding:2rem;">
+                            <i class="fas fa-camera" style="font-size:2.5rem; margin-bottom:1rem; display:block; opacity:0.4;"></i>
+                            <p style="font-size:0.88rem; margin-bottom:0.35rem;">Camera preview will appear here</p>
+                            <p style="font-size:0.75rem; opacity:0.7;">Scan or upload a QR code to record attendance</p>
+                        </div>`;
+                }).catch(err => console.error(err));
+            }
+        }
+
+        function handleQrUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const scanResult = document.getElementById('scanResult');
+            scanResult.classList.remove('show');
+            scanResult.className = 'scan-result';
+
+            document.getElementById('uploadQrBtn').innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            const tempQr = new Html5Qrcode("qr-reader");
+
+            tempQr.scanFile(file, true)
+                .then(decodedText => {
+                    showScanResult(true, decodedText);
+                })
+                .catch(err => {
+                    console.warn('Could not decode uploaded QR:', err);
+                    const scanResult = document.getElementById('scanResult');
+                    scanResult.className = 'scan-result error show';
+                    document.getElementById('scanResultIcon').innerHTML = '<i class="fas fa-image"></i>';
+                    document.getElementById('scanResultTitle').textContent = 'Could Not Read QR';
+                    document.getElementById('scanResultMsg').textContent = 'No QR code found in this image. Please try a clearer photo.';
+                    document.getElementById('scanResultDetails').innerHTML = '';
+                    document.getElementById('qr-reader').style.display = 'none';
+                    document.querySelector('.scan-actions').style.display = 'none';
+                })
+                .finally(() => {
+                    document.getElementById('uploadQrBtn').innerHTML = '<i class="fas fa-upload"></i> Upload QR Image';
+                    event.target.value = '';
+                });
+        }
+
+        function showScanResult(success, qrData) {
+            const scanResult = document.getElementById('scanResult');
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const dateStr = now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+            const typeLabel = scanType === 'in' ? 'Time In' : 'Time Out';
+
+            // ============ VERIFY QR DATA ============
+            let subject = 'Unknown';
+            let room = 'Unknown';
+            let sessionClass = '';
+            let sessionDate = '';
+            let verified = false;
+
+            // Try to parse as JSON (teacher-generated QR)
+            try {
+                const parsed = JSON.parse(qrData);
+                if (parsed.system === 'attendease' && parsed.class && parsed.token) {
+                    // Verify against active sessions in localStorage
+                    const sessions = JSON.parse(localStorage.getItem('attendease_sessions') || '[]');
+                    const matchedSession = sessions.find(s =>
+                        s.class === parsed.class &&
+                        s.token === parsed.token &&
+                        s.date === parsed.date
+                    );
+
+                    if (matchedSession) {
+                        // Check if session has expired
+                        const createdAt = new Date(matchedSession.createdAt);
+                        const expiresAt = new Date(createdAt.getTime() + matchedSession.expiry * 60 * 1000);
+
+                        if (now <= expiresAt) {
+                            verified = true;
+                            subject = parsed.class;
+                            room = parsed.room;
+                            sessionClass = parsed.class;
+                            sessionDate = parsed.date;
+                        } else {
+                            // Expired
+                            scanResult.className = 'scan-result error show';
+                            document.getElementById('scanResultIcon').innerHTML = '<i class="fas fa-clock"></i>';
+                            document.getElementById('scanResultTitle').textContent = 'QR Code Expired';
+                            document.getElementById('scanResultMsg').textContent = `This QR code expired at ${expiresAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}. Ask your teacher to generate a new one.`;
+                            document.getElementById('scanResultDetails').innerHTML = '';
+                            document.getElementById('qr-reader').style.display = 'none';
+                            document.querySelector('.scan-actions').style.display = 'none';
+                            document.getElementById('startScanBtn').disabled = false;
+                            document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-camera"></i> Scan with Camera';
+                            return;
+                        }
+                    } else {
+                        // No matching session
+                        scanResult.className = 'scan-result error show';
+                        document.getElementById('scanResultIcon').innerHTML = '<i class="fas fa-times"></i>';
+                        document.getElementById('scanResultTitle').textContent = 'Invalid QR Code';
+                        document.getElementById('scanResultMsg').textContent = 'This QR code does not match any active class session. Please verify with your teacher.';
+                        document.getElementById('scanResultDetails').innerHTML = '';
+                        document.getElementById('qr-reader').style.display = 'none';
+                        document.querySelector('.scan-actions').style.display = 'none';
+                        document.getElementById('startScanBtn').disabled = false;
+                        document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-camera"></i> Scan with Camera';
+                        return;
+                    }
+                } else {
+                    // Valid JSON but not an AttendEase QR code
+                    scanResult.className = 'scan-result error show';
+                    document.getElementById('scanResultIcon').innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                    document.getElementById('scanResultTitle').textContent = 'Not an AttendEase QR';
+                    document.getElementById('scanResultMsg').textContent = 'This QR code was not generated by the AttendEase system. Please scan the correct QR code from your teacher.';
+                    document.getElementById('scanResultDetails').innerHTML = '';
+                    document.getElementById('qr-reader').style.display = 'none';
+                    document.querySelector('.scan-actions').style.display = 'none';
+                    document.getElementById('startScanBtn').disabled = false;
+                    document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-camera"></i> Scan with Camera';
+                    return;
+                }
+            } catch (e) {
+                // Not valid JSON — treat as unrecognized QR (e.g. URL, plain text, random QR)
+                scanResult.className = 'scan-result error show';
+                document.getElementById('scanResultIcon').innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                document.getElementById('scanResultTitle').textContent = 'Unrecognized QR Code';
+                document.getElementById('scanResultMsg').textContent = 'This is not a valid AttendEase QR code. Please scan the QR code provided by your teacher.';
+                document.getElementById('scanResultDetails').innerHTML = '';
+                document.getElementById('qr-reader').style.display = 'none';
+                document.querySelector('.scan-actions').style.display = 'none';
+                document.getElementById('startScanBtn').disabled = false;
+                document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-camera"></i> Scan with Camera';
+                return;
+            }
+
+            // ============ CHECK FOR DUPLICATE SCAN ============
+            const existingRecords = JSON.parse(localStorage.getItem('attendease_attendance') || '[]');
+            const studentName = document.getElementById('profileName')?.textContent || 'Student';
+            const alreadyScanned = existingRecords.find(r =>
+                r.class === sessionClass &&
+                r.date === sessionDate &&
+                r.studentName === studentName &&
+                r.type === typeLabel
+            );
+
+            if (alreadyScanned) {
+                scanResult.className = 'scan-result error show';
+                document.getElementById('scanResultIcon').innerHTML = '<i class="fas fa-info-circle"></i>';
+                document.getElementById('scanResultTitle').textContent = 'Already Recorded';
+                document.getElementById('scanResultMsg').textContent = `Your ${typeLabel} for ${subject} was already recorded at ${alreadyScanned.time}.`;
+                document.getElementById('scanResultDetails').innerHTML = '';
+                document.getElementById('qr-reader').style.display = 'none';
+                document.querySelector('.scan-actions').style.display = 'none';
+                document.getElementById('startScanBtn').disabled = false;
+                document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-camera"></i> Scan with Camera';
+                return;
+            }
+
+            // ============ RECORD ATTENDANCE ============
+            if (verified) {
+                // Get geolocation if available
+                let lat = '—';
+                let lng = '—';
+                if (navigator.geolocation) {
+                    navigator.geolocation.getCurrentPosition(pos => {
+                        // Update the record with real location
+                        const records = JSON.parse(localStorage.getItem('attendease_attendance') || '[]');
+                        const lastRecord = records[records.length - 1];
+                        if (lastRecord) {
+                            lastRecord.lat = pos.coords.latitude.toFixed(4);
+                            lastRecord.lng = pos.coords.longitude.toFixed(4);
+                            localStorage.setItem('attendease_attendance', JSON.stringify(records));
+                        }
+                    }, () => { /* location denied, keep dashes */ });
+                }
+
+                const attendanceRecord = {
+                    class: sessionClass,
+                    date: sessionDate,
+                    studentName: studentName,
+                    studentId: document.getElementById('profileStudentId')?.textContent || '',
+                    type: typeLabel,
+                    time: timeStr,
+                    fullTimestamp: now.toISOString(),
+                    lat: lat,
+                    lng: lng,
+                    room: room
+                };
+
+                existingRecords.push(attendanceRecord);
+                localStorage.setItem('attendease_attendance', JSON.stringify(existingRecords));
+
+                scanResult.className = 'scan-result success show';
+                document.getElementById('scanResultIcon').innerHTML = '<i class="fas fa-check"></i>';
+                document.getElementById('scanResultTitle').textContent = 'Attendance Recorded!';
+                document.getElementById('scanResultMsg').textContent = `${typeLabel} successfully recorded.`;
+
+                document.getElementById('scanResultDetails').innerHTML = `
+                    <div class="detail-row">
+                        <span>Type</span>
+                        <span>${typeLabel}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Subject</span>
+                        <span>${subject}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Room</span>
+                        <span>${room}</span>
+                    </div>
+                    <div class="detail-row">
+                        <span>Timestamp</span>
+                        <span>${dateStr}, ${timeStr}</span>
+                    </div>
+                `;
+            }
+
+            document.getElementById('qr-reader').style.display = 'none';
+            document.querySelector('.scan-actions').style.display = 'none';
+
+            // Reset scan button
+            document.getElementById('startScanBtn').disabled = false;
+            document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-camera"></i> Scan with Camera';
+        }
+
+        function resetScanner() {
+            document.getElementById('scanResult').classList.remove('show');
+            document.getElementById('scanResult').className = 'scan-result';
+
+            document.getElementById('qr-reader').style.display = 'flex';
+            document.querySelector('.scan-actions').style.display = 'flex';
+            document.getElementById('stopCameraBtn').classList.remove('visible');
+
+            document.getElementById('startScanBtn').disabled = false;
+            document.getElementById('startScanBtn').innerHTML = '<i class="fas fa-camera"></i> Scan with Camera';
+
+            document.getElementById('qr-reader').innerHTML = `
+                <div style="text-align:center; color:var(--text-muted); padding:2rem;">
+                    <i class="fas fa-camera" style="font-size:2.5rem; margin-bottom:1rem; display:block; opacity:0.4;"></i>
+                    <p style="font-size:0.88rem; margin-bottom:0.35rem;">Camera preview will appear here</p>
+                    <p style="font-size:0.75rem; opacity:0.7;">Scan or upload a QR code to record attendance</p>
+                </div>`;
+        }
+
+        // ==========================================
+        //  PROFILE – SAVE / CANCEL
+        // ==========================================
+        // Store originals for cancel
+        const originalProfileValues = {};
+
+        window.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.detail-input').forEach(input => {
+                originalProfileValues[input.id] = input.value;
+            });
+        });
+
+        function saveProfile() {
+            const btn = document.getElementById('saveProfileBtn');
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            btn.disabled = true;
+
+            // Simulate save delay
+            setTimeout(() => {
+                // Update sidebar / header profile info
+                const nameVal = document.getElementById('editFullName').value.trim();
+                if (nameVal) {
+                    document.getElementById('profileName').textContent = nameVal;
+                    const initials = nameVal.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                    document.getElementById('profileAvatar').textContent = initials;
+                    document.getElementById('headerAvatar').textContent = initials;
+                }
+
+                const emailVal = document.getElementById('editEmail').value.trim();
+                if (emailVal) document.getElementById('profileEmail').textContent = emailVal;
+
+                const parentVal = document.getElementById('editParentPhone').value.trim();
+                if (parentVal) document.getElementById('profileParentPhone').textContent = parentVal;
+
+                // Update originals
+                document.querySelectorAll('.detail-input').forEach(input => {
+                    originalProfileValues[input.id] = input.value;
+                });
+
+                btn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+                btn.disabled = false;
+
+                showToast('Profile updated successfully!');
+            }, 800);
+        }
+
+        function cancelProfileEdit() {
+            document.querySelectorAll('.detail-input').forEach(input => {
+                if (originalProfileValues[input.id] !== undefined) {
+                    input.value = originalProfileValues[input.id];
+                }
+            });
+            showToast('Changes discarded.');
+        }
+
+        function changePassword() {
+            const currentPw = document.getElementById('editCurrentPassword').value;
+            const newPw = document.getElementById('editNewPassword').value;
+
+            if (!currentPw || !newPw) {
+                showToast('Please fill in both password fields.');
+                return;
+            }
+
+            if (newPw.length < 6) {
+                showToast('New password must be at least 6 characters.');
+                return;
+            }
+
+            // Simulate
+            setTimeout(() => {
+                document.getElementById('editCurrentPassword').value = '';
+                document.getElementById('editNewPassword').value = '';
+                showToast('Password updated successfully!');
+            }, 600);
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('saveToast');
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+    </script>
+
+</body>
+
+</html>
