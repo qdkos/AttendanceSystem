@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AttendEase System</title>
+    <link rel="stylesheet" href="login.css">
+</head>
+
+<body>
+    <div class="login-container">
+        <form class="login-form" id="loginForm">
+            <h2>AttendEase System</h2>
+            <p>Please enter your credentials to continue</p>
+
+            <div class="input-group">
+                <label for="username">Email</label>
+                <input type="email" id="username" name="username" placeholder="Enter Email" required>
+            </div>
+
+            <div class="input-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" placeholder="Enter Password" required>
+            </div>
+
+            <div class="error-message" id="errorMessage"></div>
+
+            <button type="submit" class="login-btn" id="loginBtn">Login</button>
+
+            <div class="footer-links">
+                <a href="#" id="forgotPassword">Forgot Password?</a>
+            </div>
+        </form>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script>
+
+        const supabaseUrl = 'YOUR_SUPABASE_URL';
+        const supabaseKey = 'YOUR_ANON_KEY';
+
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // LOGIN HANDLER
+        document.getElementById('loginForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const role = document.getElementById('role').value;
+            const email = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value;
+            const errorMessage = document.getElementById('errorMessage');
+            const loginBtn = document.getElementById('loginBtn');
+
+            errorMessage.textContent = '';
+            errorMessage.style.display = 'none';
+
+            if (!email || !password) {
+                showError('Please fill in all fields');
+                return;
+            }
+
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Logging in...';
+
+            try {
+                // 🔐 LOGIN WITH SUPABASE
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+                if (error) {
+                    showError(error.message);
+                    return;
+                }
+
+                const user = data.user;
+
+                // 🔍 GET ROLE FROM DATABASE
+                const { data: profile, error: profileError } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profileError) {
+                    showError('Could not fetch user role');
+                    return;
+                }
+
+                const userRole = profile.role;
+
+                // Optional: check if selected role matches DB
+                if (role !== userRole) {
+                    showError('Incorrect role selected');
+                    return;
+                }
+
+                // Save session info
+                localStorage.setItem('userRole', userRole);
+                localStorage.setItem('email', email);
+
+                redirectToDashboard(userRole);
+
+            } catch (err) {
+                showError('Something went wrong');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Login';
+            }
+        });
+
+        // ERROR DISPLAY
+        function showError(message) {
+            const errorMessage = document.getElementById('errorMessage');
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+
+        // REDIRECT
+        function redirectToDashboard(role) {
+            const dashboards = {
+                student: '/student/dashboard.html',
+                teacher: '/teacher/dashboard.html',
+                admin: '/admin/dashboard.html'
+            };
+
+            window.location.href = dashboards[role] || '/dashboard.html';
+        }
+
+        // AUTO LOGIN CHECK
+        window.addEventListener('load', async function () {
+            const { data } = await supabase.auth.getSession();
+
+            if (data.session) {
+                const user = data.session.user;
+
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('role')
+                    .eq('id', user.id)
+                    .single();
+
+                if (profile) {
+                    redirectToDashboard(profile.role);
+                }
+            }
+        });
+
+    </script>
+</body>
+
+</html>
